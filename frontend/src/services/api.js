@@ -15,3 +15,8 @@ export async function getRecoveryCases() {
   const response = await api.get('/dashboard/cases')
   return response.data
 }
+
+export async function getCaseDetail(caseId) {
+  const response = await api.get('/dashboard/cases/' + caseId)
+  return response.data
+}

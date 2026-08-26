@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
-import { getDashboardSummary } from '../services/api'
+import { Link } from 'react-router-dom'
+import { getDashboardSummary, getRecoveryCases } from '../services/api'
 
 function StatCard({ label, value, accent }) {
   return (
@@ -12,11 +13,15 @@ function StatCard({ label, value, accent }) {
 
 function Dashboard() {
   const [summary, setSummary] = useState(null)
+  const [cases, setCases] = useState([])
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    getDashboardSummary()
-      .then(setSummary)
+    Promise.all([getDashboardSummary(), getRecoveryCases()])
+      .then(([summaryData, casesData]) => {
+        setSummary(summaryData)
+        setCases(casesData)
+      })
       .catch((err) => setError(err.message))
   }, [])
 
@@ -64,7 +69,7 @@ function Dashboard() {
         />
       </div>
 
-      <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+      <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 mb-8">
         <h2 className="text-lg font-semibold mb-4">Actions Taken</h2>
         {Object.keys(summary.action_counts).length === 0 ? (
           <p className="text-slate-400">No actions recorded yet.</p>
@@ -81,6 +86,42 @@ function Dashboard() {
         <p className="text-slate-400 mt-4 text-sm">
           Blocked by policy: {summary.policy_blocked_count}
         </p>
+      </div>
+
+      <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+        <h2 className="text-lg font-semibold mb-4">Recovery Cases</h2>
+        {cases.length === 0 ? (
+          <p className="text-slate-400">No cases yet.</p>
+        ) : (
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-slate-400 text-sm border-b border-slate-700">
+                <th className="py-2 pr-4">Case</th>
+                <th className="py-2 pr-4">Amount</th>
+                <th className="py-2 pr-4">Failure Reason</th>
+                <th className="py-2 pr-4">Probability</th>
+                <th className="py-2 pr-4">Action</th>
+                <th className="py-2 pr-4">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cases.map((c) => (
+                <tr key={c.id} className="border-b border-slate-800 hover:bg-slate-700/50">
+                  <td className="py-3 pr-4">
+                    <Link to={'/case/' + c.id} className="text-sky-400 hover:underline">
+                      #{c.id}
+                    </Link>
+                  </td>
+                  <td className="py-3 pr-4">Rs {c.amount}</td>
+                  <td className="py-3 pr-4">{c.failure_reason}</td>
+                  <td className="py-3 pr-4">{Math.round(c.recovery_probability * 100)}%</td>
+                  <td className="py-3 pr-4">{c.recommended_action}</td>
+                  <td className="py-3 pr-4">{c.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )
