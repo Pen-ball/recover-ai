@@ -1,8 +1,11 @@
 ﻿# Razorpay Webhook Endpoint
 #
-# Receives real-time payment event notifications from Razorpay
-# (e.g. payment.failed, payment_link.paid). Verifies the signature to
-# confirm authenticity, checks for duplicate events, and responds fast.
+# Receives real-time payment event notifications from Razorpay. On
+# payment.failed events, runs the full RecoverAI pipeline: find/create
+# customer and transaction records, diagnose the failure, predict
+# recovery probability (ML), calculate expected value, select and
+# policy-check an action, execute it, and log everything to the audit
+# trail.
 
 from fastapi import APIRouter, Request, Header, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -13,10 +16,162 @@ from dotenv import load_dotenv
 
 from backend.app.db.database import get_db
 from backend.app.models.webhook import WebhookEvent
+from backend.app.models.customer import Customer
+from backend.app.models.transaction import Transaction
+from backend.app.models.recovery import RecoveryCase
+from backend.app.models.action import RecoveryAction
+
+from backend.app.services.diagnosis_service import diagnose_failure
+from backend.app.services.ml_predictor import predict_recovery_probability
+from backend.app.services.expected_value import calculate_expected_recovery_value
+from backend.app.services.decision_engine import select_candidate_action
+from backend.app.services.policy_engine import evaluate_policy
+from backend.app.services.decision_explainer import generate_explanation
+from backend.app.services.action_executor import execute_action
+from backend.app.services.audit_logger import log_audit_event
 
 load_dotenv()
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
+
+
+def get_or_create_customer(db: Session, email: str, contact: str = None) -> Customer:
+    customer = db.query(Customer).filter(Customer.email == email).first()
+    if customer:
+        return customer
+
+    customer = Customer(
+        name=email.split("@")[0],  # placeholder name when Razorpay doesn't give one
+        email=email,
+        phone=contact,
+    )
+    db.add(customer)
+    db.commit()
+    db.refresh(customer)
+    return customer
+
+
+def handle_payment_failed(db: Session, payment_entity: dict):
+    email = payment_entity.get("email") or "unknown@example.com"
+    contact = payment_entity.get("contact")
+    amount_rupees = payment_entity.get("amount", 0) / 100  # paise -> rupees
+
+    customer = get_or_create_customer(db, email, contact)
+
+    failure_category = diagnose_failure(
+        error_reason=payment_entity.get("error_reason"),
+        error_code=payment_entity.get("error_code"),
+    )
+
+    transaction = Transaction(
+        razorpay_payment_id=payment_entity.get("id"),
+        customer_id=customer.id,
+        amount=amount_rupees,
+        currency=payment_entity.get("currency") or "INR",
+        payment_method=payment_entity.get("method"),
+        status="failed",
+        failure_reason=failure_category,
+        failure_code=payment_entity.get("error_code"),
+    )
+    db.add(transaction)
+    db.commit()
+    db.refresh(transaction)
+
+    log_audit_event(db, "transaction", transaction.id, "payment_failure_detected",
+                     reason=f"Failure category: {failure_category}")
+
+    # --- Run the ML + decision + policy pipeline ---
+    transaction_row = {
+        "amount": amount_rupees,
+        "retry_count": 0,
+        "total_transactions": customer.total_transactions or 1,
+        "successful_transactions": customer.successful_transactions or 0,
+        "failed_transactions": customer.failed_transactions or 0,
+        "average_transaction_value": customer.average_transaction_value or amount_rupees,
+        "lifetime_value": customer.lifetime_value or 0,
+        "failure_reason": failure_category,
+        "payment_method": payment_entity.get("method") or "card",
+    }
+
+    recovery_probability = predict_recovery_probability(transaction_row)
+    rough_erv = recovery_probability * amount_rupees
+
+    candidate_action = select_candidate_action(
+        recovery_probability=recovery_probability,
+        expected_recovery_value=rough_erv,
+        retry_count=0,
+    )
+
+    erv_result = calculate_expected_recovery_value(
+        recovery_probability=recovery_probability,
+        transaction_amount=amount_rupees,
+        action_type=candidate_action,
+        retry_count=0,
+    )
+
+    policy_result = evaluate_policy(
+        recommended_action=candidate_action,
+        recovery_probability=recovery_probability,
+        transaction_amount=amount_rupees,
+        retry_count=0,
+    )
+    final_action = policy_result["final_action"]
+
+    log_audit_event(
+        db, "transaction", transaction.id, "policy_evaluated",
+        decision=candidate_action,
+        policy_decision=policy_result["policy_status"],
+        reason=policy_result["reason"],
+    )
+
+    # --- Create the recovery case record ---
+    recovery_case = RecoveryCase(
+        transaction_id=transaction.id,
+        revenue_at_risk=amount_rupees,
+        recovery_probability=recovery_probability,
+        recommended_action=final_action,
+        expected_recovery=erv_result["expected_recovery_value"],
+        status="open",
+    )
+    db.add(recovery_case)
+    db.commit()
+    db.refresh(recovery_case)
+
+    # --- Get LLM explanation (with built-in fallback) ---
+    explanation_result = generate_explanation(
+        action=final_action,
+        recovery_probability=recovery_probability,
+        expected_recovery_value=erv_result["expected_recovery_value"],
+        failure_reason=failure_category,
+        retry_count=0,
+    )
+
+    # --- Execute the action ---
+    execution_result = execute_action(
+        action_type=final_action,
+        transaction_amount=amount_rupees,
+        customer_name=customer.name,
+        customer_email=customer.email,
+        reference_id=f"recovery_case_{recovery_case.id}",
+    )
+
+    recovery_action = RecoveryAction(
+        recovery_case_id=recovery_case.id,
+        action_type=final_action,
+        action_reason=explanation_result["explanation"],
+        risk_score=1 - recovery_probability,
+        expected_value=erv_result["expected_recovery_value"],
+        policy_status=policy_result["policy_status"],
+        result=execution_result["result"],
+    )
+    db.add(recovery_action)
+    db.commit()
+
+    log_audit_event(
+        db, "recovery_case", recovery_case.id, "action_executed",
+        decision=final_action,
+        reason=f"{execution_result['real_or_simulated']}: {execution_result['result']}",
+    )
 
 
 @router.post("/razorpay")
@@ -25,42 +180,27 @@ async def razorpay_webhook(
     x_razorpay_signature: str = Header(None),
     db: Session = Depends(get_db),
 ):
-    # Get the RAW request body - signature verification MUST use the
-    # exact raw bytes, not a re-serialized/parsed version, or it will
-    # never match.
     raw_body = await request.body()
     raw_body_str = raw_body.decode("utf-8")
 
     webhook_secret = os.getenv("RAZORPAY_WEBHOOK_SECRET")
 
-    # --- Step 1: Verify the signature (confirms this really came from Razorpay) ---
     try:
-        client = razorpay.Client(auth=("dummy", "dummy"))  # utility doesn't need real auth
+        client = razorpay.Client(auth=("dummy", "dummy"))
         client.utility.verify_webhook_signature(raw_body_str, x_razorpay_signature, webhook_secret)
     except razorpay.errors.SignatureVerificationError:
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
-    # --- Step 2: Parse the verified payload ---
     payload = json.loads(raw_body_str)
     event_type = payload.get("event")
-
-    # Razorpay includes a unique id at the top level of most webhook payloads
-    # under 'account_id' + timestamp, but the most reliable unique identifier
-    # per delivery is the payload's own event entity id where available.
-    # We use payload.get("payload", {}) inner entity id combined with event
-    # type as a practical uniqueness key when a top-level id isn't present.
     event_id = payload.get("id") or f"{event_type}_{payload.get('created_at')}"
 
-    # --- Step 3: Duplicate detection (idempotency) ---
     existing = db.query(WebhookEvent).filter(
         WebhookEvent.razorpay_event_id == event_id
     ).first()
-
     if existing:
-        # Already processed - acknowledge quickly, do nothing more.
         return {"status": "duplicate_ignored"}
 
-    # --- Step 4: Store the event ---
     webhook_event = WebhookEvent(
         razorpay_event_id=event_id,
         event_type=event_type,
@@ -69,9 +209,13 @@ async def razorpay_webhook(
     db.add(webhook_event)
     db.commit()
 
-    # NOTE: Heavier processing (diagnosis, ML prediction, decision, policy,
-    # action execution) will be wired in during Phase 14. For now we just
-    # acknowledge receipt quickly, which is the correct webhook pattern -
-    # Razorpay expects a fast response and will retry if we take too long.
+    if event_type == "payment.failed":
+        payment_entity = payload.get("payload", {}).get("payment", {}).get("entity", {})
+        try:
+            handle_payment_failed(db, payment_entity)
+        except Exception as e:
+            # Never let pipeline errors break the webhook response -
+            # log it, but still acknowledge receipt to Razorpay.
+            log_audit_event(db, "webhook_event", webhook_event.id, "pipeline_error", reason=str(e))
 
     return {"status": "received", "event_type": event_type}
