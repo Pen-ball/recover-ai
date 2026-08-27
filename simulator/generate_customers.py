@@ -1,11 +1,11 @@
-﻿import numpy as np
+import numpy as np
 import pandas as pd
 from faker import Faker
 
 fake = Faker()
 np.random.seed(42)  # Fixes randomness so results are reproducible every run
 
-NUM_CUSTOMERS = 2000
+NUM_CUSTOMERS = 5000
 
 
 def generate_customers(n):

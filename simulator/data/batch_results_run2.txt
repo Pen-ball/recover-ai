@@ -1,0 +1,25 @@
+﻿RecoverAI Batch Experiment Run 2 (20,000 Transactions / 5,000 Customers)
+
+=== Baseline Results ===
+strategy: Baseline
+total_revenue_at_risk: 100702827.98
+total_recovered: 25914065.12
+total_intervention_cost: 79656.0
+net_recovered: 25834409.12
+actions_taken: 9957
+stopped: 10043
+recovery_rate: 0.2573
+
+=== RecoverAI Results ===
+strategy: RecoverAI
+total_revenue_at_risk: 100702827.98
+total_recovered: 32932268.86
+total_intervention_cost: 77633.0
+net_recovered: 32854635.86
+actions_taken: 11608
+stopped: 4542
+escalated: 3850
+blocked_by_policy: 0
+recovery_rate: 0.327
+
+=== Net Recovered Improvement: 27.2% ===

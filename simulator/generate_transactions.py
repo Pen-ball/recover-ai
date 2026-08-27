@@ -1,10 +1,10 @@
-﻿import numpy as np
+import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 
 np.random.seed(42)
 
-NUM_TRANSACTIONS = 8000
+NUM_TRANSACTIONS = 20000
 
 FAILURE_REASONS = [
     "temporary_bank_failure",
