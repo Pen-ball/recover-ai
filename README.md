@@ -1,83 +1,135 @@
-﻿# RecoverAI — Autonomous Revenue Recovery Agent for Razorpay
+﻿# RecoverAI
 
-Built for the Razorpay AI Buildathon (Track 3: AI Revenue Recovery).
+Autonomous Revenue Recovery Agent for Razorpay
+Built for the Razorpay AI Buildathon — Track 3: AI Revenue Recovery
 
-RecoverAI is an intelligent, policy-governed agent system that automatically diagnoses payment failures, predicts recovery probability, evaluates expected recovery value, selects optimized recovery actions, and executes them safely within strict policy boundaries.
+## The Problem
 
-One-Line Pitch: RecoverAI doesn't just detect failed payments — it decides the safest and highest-value recovery action, executes it within strict policy boundaries, and measures the revenue it actually recovers.
+Merchants using Razorpay lose revenue when payments fail — bank issues,
+insufficient funds, abandoned checkouts, authentication failures. Most
+businesses have no systematic way to detect this revenue at risk,
+diagnose why it happened, or decide whether and how to recover it.
 
----
+## The Solution
 
-## Architecture Overview
+RecoverAI is a closed-loop AI system that detects failed payments in
+real time via Razorpay webhooks, diagnoses the failure, predicts
+recovery probability using a trained machine learning model, calculates
+expected recovery value, decides on the safest and highest-value
+recovery action, checks that decision against deterministic safety
+policies, executes the approved action (creating a real Razorpay
+Payment Link when appropriate), and records a full audit trail.
 
-+-------------------+     +------------------+     +-----------------------+
-| Razorpay Webhook  | --> | Event Collector  | --> |  FastAPI Backend      |
-| / Test Mode Cards |     | (Signature Verif)|     | (Database Transaction)|
-+-------------------+     +------------------+     +-----------------------+
-                                                               |
-                                                               v
-+-------------------+     +------------------+     +-----------------------+
-| Decision Explainer| <-- |  Policy Engine   | <-- | Decision & EV Engine  |
-| (Gemini + Fallback)    | (Safety Gate Veto)|     | (Logistic Regression) |
-+-------------------+     +------------------+     +-----------------------+
-          |                                                    
-          v                                                    
-+-------------------+     +------------------+                 
-| Action Executor   | --> | Audit Trail &    |                 
-| (Payment Links)   |     | React Dashboard  |                 
-+-------------------+     +------------------+                 
+One-line pitch: RecoverAI doesn't just detect failed payments — it
+decides the safest and highest-value recovery action, executes it
+within strict policy boundaries, and measures the revenue it actually
+recovers.
 
----
+## Architecture
 
-## Core Technical Principles
+See docs/architecture_diagram.md for the full flow diagram.
 
-1. Policy Engine Overrides LLM & AI Decision:
-   The LLM (Google Gemini) NEVER makes operational payment decisions. It only generates natural language explanations for decisions made by deterministic algorithms. Final authorization resides strictly in a deterministic Policy Engine enforcing rate limits, maximum amount ceilings, and cooldown periods.
+Razorpay Webhook -> FastAPI Backend -> Diagnosis -> ML Prediction ->
+Expected Value -> Decision Engine -> Policy Gate -> Action Executor ->
+Audit Trail -> React Dashboard
 
-2. Transparent Real vs Simulated Boundaries:
-   - REAL: Razorpay Test Mode Payment Links, Webhook receipt & HMAC-SHA256 signature verification, ML inference (scikit-learn), PostgreSQL CRUD, and Gemini API calls.
-   - SIMULATED: RETRY, CUSTOMER_NUDGE, ESCALATE, and STOP actions (because Razorpay lacks direct APIs for arbitrary retry execution, these are logged internally with real_or_simulated=simulated).
+Critical design principle: the LLM never directly controls payment
+actions. It only explains decisions already made by deterministic code.
+A separate Policy Engine has final veto authority over any AI-
+recommended action.
 
----
+## Tech Stack
 
-## Key Benchmark Results
+- Backend: FastAPI, SQLAlchemy, PostgreSQL
+- ML: scikit-learn (Logistic Regression), XGBoost (compared, not selected)
+- AI: Google Gemini (decision explanations only, with tested fallback)
+- Payments: Razorpay Python SDK, real Test Mode integration
+- Frontend: React, Vite, Tailwind CSS, Recharts
+- Testing: pytest (21 automated tests)
+- Deployment: Render (backend), Vercel (frontend), Neon (database)
 
-Evaluated across a full-scale synthetic dataset of 20,000 transactions (5,000 customers):
+## Real vs Simulated
 
-- Revenue at Risk: Rs 10,07,02,827.98
-- Baseline Strategy (Fixed Retries):
-  - Net Revenue Recovered: Rs 2,58,34,409.12
-  - Recovery Rate: 25.73%
-- RecoverAI Agent:
-  - Net Revenue Recovered: Rs 3,28,54,635.86
-  - Recovery Rate: 32.70%
-- Empirical Lift: +27.2% Net Recovery Improvement over Baseline
+REAL: Razorpay Test Mode Payment Link creation, webhook receipt and
+signature verification, ML inference, LLM calls, database persistence.
 
----
+SIMULATED (explicitly labeled in code and API responses via a
+real_or_simulated field): RETRY, CUSTOMER_NUDGE, ESCALATE, and STOP
+actions, since Razorpay has no generic API for these.
 
-## Machine Learning Model
+## Machine Learning
 
-- Production Model: Logistic Regression (Selected over XGBoost based on higher ROC-AUC: 0.781 vs 0.774).
-- Rationale: Logistic Regression naturally fits the linear patterns in payment failure data while offering lightweight, zero-latency inference for real-time webhooks.
+Trained on a synthetic dataset of 20,000 transactions with engineered,
+documented relationships between failure type, customer history, and
+recovery outcome (see docs/synthetic_data_assumptions.md). Logistic
+Regression and XGBoost were compared honestly; see
+docs/ml_model_results.md for full metrics and the reasoning behind
+model selection.
 
----
+## Measured Results
 
-## Project Structure
+A controlled batch experiment compared a simple Baseline strategy
+against the full RecoverAI pipeline on the same 20,000 transactions.
 
-recover-ai/
-  backend/           FastAPI app, database models, policy & decision engines
-  frontend/          React (Vite) + Tailwind CSS dashboard & audit trail UI
-  ml/                Model training script & saved production binaries
-  simulator/         Synthetic dataset generators & batch simulation engine
-  docs/              Honest technical verification reports & architecture docs
-  docker-compose.yml Unified containerization setup
+[PASTE YOUR ACTUAL RUN 2 NUMBERS HERE FROM docs/batch_experiment_results.md]
 
----
+Full methodology in docs/batch_experiment_results.md.
 
-## Quick Start (Docker)
+## Safety and Policy Engine
 
-1. Ensure Docker Desktop is running.
-2. Build and launch:
-   docker-compose up --build -d
-3. Open Dashboard at http://localhost
-4. Open API docs at http://localhost:8000/docs
+Four deterministic rules govern every AI-recommended action: minimum
+recovery probability, maximum retry count, maximum transaction amount
+for fully-automated actions, and a cooldown period between actions on
+the same case. All four rules are individually tested; see
+docs/testing.md.
+
+## Setup Instructions
+
+1. Clone the repo: git clone [YOUR REPO URL]
+2. Backend: cd backend, pip install -r requirements.txt
+3. Create a .env file (see .env.example for required variables)
+4. Run database migrations: python -m backend.app.db.create_tables
+5. Start backend: uvicorn backend.app.main:app --reload
+6. Frontend: cd frontend, npm install, npm run dev
+
+## Environment Variables Required
+
+DATABASE_URL, GEMINI_API_KEY, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET,
+RAZORPAY_WEBHOOK_SECRET
+
+## Testing
+
+python -m pytest backend/tests/ -v
+
+21 automated tests covering the policy engine, decision engine,
+expected value calculations, webhook signature verification, and
+diagnosis mapping. See docs/testing.md.
+
+## Live Demo
+
+Frontend: [YOUR VERCEL URL]
+Backend API docs: [YOUR RENDER URL]/docs
+
+## Limitations
+
+- Synthetic data is used for ML training and batch experimentation,
+  clearly documented as such throughout.
+- Simulated actions (RETRY, CUSTOMER_NUDGE, ESCALATE, STOP) reflect the
+  real constraint that Razorpay has no generic API for these operations.
+- Free-tier hosting means the backend may take 30-60 seconds to respond
+  after periods of inactivity (cold start).
+
+## Future Improvements
+
+- Real SMS/email delivery for CUSTOMER_NUDGE actions
+- Merchant-configurable policy thresholds via a settings UI
+- Support for subscription/recurring payment recovery flows
+- A/B testing framework for comparing decision strategies live
+
+## Documentation
+
+Full methodology and verification documents are in the docs/ folder,
+including synthetic data assumptions, ML model results, batch
+experiment results, Razorpay Test Mode verification, webhook
+integration verification, end-to-end pipeline verification, and the
+testing suite documentation.
