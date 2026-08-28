@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api import customers, transactions, webhooks, dashboard
 
@@ -6,7 +6,7 @@ app = FastAPI(title="RecoverAI Backend")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://recover-ai-gamma.vercel.app/"],
+    allow_origins=["http://localhost:5173", "https://recover-ai-gamma.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
