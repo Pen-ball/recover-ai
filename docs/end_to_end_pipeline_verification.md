@@ -1,4 +1,4 @@
-﻿# End-to-End Pipeline - Verified Live
+# End-to-End Pipeline - Verified Live
 
 ## What Was Built
 
@@ -9,12 +9,12 @@ webhook flow. When a real payment.failed event arrives:
 2. Transaction is recorded with status=failed.
 3. Failure is diagnosed: Razorpay's real error_code/error_reason is
    mapped to RecoverAI's internal failure categories.
-4. ML model predicts recovery probability (Phase 7 model, real inference).
-5. Expected Recovery Value is calculated (Phase 8 formula).
-6. Decision Engine selects a candidate action (Phase 9 rules).
-7. Policy Engine approves or blocks it (Phase 10 rules).
+4. ML model predicts recovery probability (trained model, real inference).
+5. Expected Recovery Value is calculated (deterministic formula).
+6. Decision Engine selects a candidate action .
+7. Policy Engine approves or blocks it .
 8. LLM (Gemini) generates a human-readable explanation, with automatic
-   fallback if unavailable (Phase 9).
+   fallback if unavailable.
 9. Action Executor carries out the final action - creates a REAL
    Razorpay Payment Link for PAYMENT_LINK actions, or logs a clearly
    labeled SIMULATED action for RETRY/CUSTOMER_NUDGE/ESCALATE/STOP.
@@ -49,7 +49,7 @@ scenario). Result, entirely from real code execution:
 
 ## Debugging Notes (honest record)
 
-- Multiple stale PowerShell windows from earlier phases caused confusion
+- Multiple stale PowerShell windows from earlier terminal sessions caused confusion
   about which server instance was actually running the latest code.
   Resolved by closing all terminals and restarting exactly two tracked
   windows (server + tunnel) from scratch.
