@@ -1,10 +1,3 @@
-# Recovery Simulator - Batch Runner
-#
-# Runs both the Baseline strategy and the full RecoverAI pipeline across
-# the same batch of synthetic transactions, and measures real (not
-# fabricated) recovered revenue for each, using each transaction's
-# true_recovery_probability as the honest ground-truth outcome model.
-
 import numpy as np
 import pandas as pd
 
