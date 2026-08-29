@@ -1,18 +1,18 @@
-﻿from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
 
 
-# What the API accepts when someone CREATES a customer.
-# Only the fields a user should actually provide.
+
+
 class CustomerCreate(BaseModel):
     name: str
     email: EmailStr
     phone: Optional[str] = None
 
 
-# What the API returns when sending customer data back.
-# Includes system-generated fields like id, lifetime_value, etc.
+
+
 class CustomerResponse(BaseModel):
     id: int
     name: str

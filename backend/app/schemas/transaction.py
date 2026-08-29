@@ -1,9 +1,9 @@
-﻿from pydantic import BaseModel
+from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
 
-# What the API accepts when someone CREATES a transaction.
+
 class TransactionCreate(BaseModel):
     customer_id: int
     amount: float
@@ -15,7 +15,7 @@ class TransactionCreate(BaseModel):
     razorpay_payment_id: Optional[str] = None
 
 
-# What the API returns when sending transaction data back.
+
 class TransactionResponse(BaseModel):
     id: int
     razorpay_payment_id: Optional[str] = None

@@ -1,4 +1,4 @@
-﻿# Recovery Simulator - Batch Runner
+# Recovery Simulator - Batch Runner
 #
 # Runs both the Baseline strategy and the full RecoverAI pipeline across
 # the same batch of synthetic transactions, and measures real (not
@@ -165,3 +165,4 @@ if __name__ == "__main__":
         if baseline_results["net_recovered"] else 0
     )
     print(f"=== Net Recovered Improvement: {improvement:.1f}% ===")
+

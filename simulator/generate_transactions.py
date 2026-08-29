@@ -17,8 +17,8 @@ FAILURE_REASONS = [
 
 PAYMENT_METHODS = ["card", "upi", "netbanking", "wallet"]
 
-# Base recovery likelihood per failure reason.
-# These reflect realistic assumptions: temporary/technical issues recover
+
+# Base rates: temporary/technical issues recover
 # more often than deliberate abandonment or repeated failures.
 FAILURE_BASE_RECOVERY = {
     "temporary_bank_failure": 0.75,

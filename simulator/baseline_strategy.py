@@ -1,4 +1,4 @@
-﻿# Baseline Recovery Strategy
+# Baseline Recovery Strategy
 #
 # A simple, non-AI strategy used as our comparison point. Every failed
 # transaction gets the same treatment: send a Payment Link, up to a fixed
@@ -13,3 +13,4 @@ def baseline_select_action(retry_count: int) -> str:
     if retry_count >= BASELINE_MAX_ATTEMPTS:
         return "STOP"
     return "PAYMENT_LINK"
+

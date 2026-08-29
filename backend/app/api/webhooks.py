@@ -1,11 +1,3 @@
-﻿# Razorpay Webhook Endpoint
-#
-# Receives real-time payment event notifications from Razorpay. On
-# payment.failed events, runs the full RecoverAI pipeline: find/create
-# customer and transaction records, diagnose the failure, predict
-# recovery probability (ML), calculate expected value, select and
-# policy-check an action, execute it, and log everything to the audit
-# trail.
 
 from fastapi import APIRouter, Request, Header, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -219,3 +211,4 @@ async def razorpay_webhook(
             log_audit_event(db, "webhook_event", webhook_event.id, "pipeline_error", reason=str(e))
 
     return {"status": "received", "event_type": event_type}
+
