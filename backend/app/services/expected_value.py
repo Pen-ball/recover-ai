@@ -1,22 +1,8 @@
-﻿# Expected Recovery Value (ERV) Engine
-#
-# This is a DETERMINISTIC calculation (not ML). It takes a recovery
-# probability (from the ML model) and transaction details, and computes
-# the expected financial value of attempting recovery.
-#
-# Formula (from project spec):
-#   ERV = (Probability of Recovery x Transaction Value)
-#         - Intervention Cost
-#         - Risk Penalty
-
-from typing import Literal
+﻿from typing import Literal
 
 ActionType = Literal["RETRY", "CUSTOMER_NUDGE", "PAYMENT_LINK", "ESCALATE", "STOP"]
 
-# Flat operational cost assumption per action type.
-# These are conservative, explainable placeholder assumptions -
-# NOT measured real costs. Documented clearly so nobody mistakes
-# these for real Razorpay fees.
+# Configurable per-merchant policy defaults, not measured real costs.
 INTERVENTION_COST = {
     "RETRY": 2.0,
     "CUSTOMER_NUDGE": 5.0,
@@ -25,9 +11,6 @@ INTERVENTION_COST = {
     "STOP": 0.0,
 }
 
-# Risk penalty grows with each prior retry attempt on this case,
-# modeling increasing customer-annoyance / compliance risk from
-# repeated recovery attempts.
 RISK_PENALTY_PER_RETRY = 3.0
 
 

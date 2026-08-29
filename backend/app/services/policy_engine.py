@@ -1,32 +1,13 @@
-﻿# Policy / Safety Engine
-#
-# This is the FINAL AUTHORITY over any recovery action. The AI (ML model +
-# LLM) only RECOMMENDS an action - this engine decides whether that
-# recommendation is actually ALLOWED to execute, based on deterministic,
-# configurable merchant policy rules.
-#
-# The AI must NEVER be able to bypass this engine.
-#
-# NOTE: The threshold values below (MAX_RETRIES, MAX_TRANSACTION_AMOUNT,
-# MIN_RECOVERY_PROBABILITY, COOLDOWN_PERIOD_HOURS) are reasonable DEMO
-# defaults for this project, not real Razorpay rules or industry
-# standards. In a real deployment these would be configurable per-merchant
-# settings.
-
-from datetime import datetime, timedelta
+﻿from datetime import datetime, timedelta
 from typing import Optional, Literal
 
 ActionType = Literal["RETRY", "CUSTOMER_NUDGE", "PAYMENT_LINK", "ESCALATE", "STOP"]
 
-# ---- Configurable Policy Thresholds (demo defaults) ----
 MAX_RETRIES = 3
 MAX_TRANSACTION_AMOUNT_FOR_AUTOMATION = 50000.0
 MIN_RECOVERY_PROBABILITY = 0.10
 COOLDOWN_PERIOD_HOURS = 6
 
-# Actions considered "automated" (no human involved) - subject to the
-# amount cap. ESCALATE and STOP are always allowed regardless of amount,
-# since they either involve a human or do nothing.
 AUTOMATED_ACTIONS = {"RETRY", "CUSTOMER_NUDGE", "PAYMENT_LINK"}
 
 
