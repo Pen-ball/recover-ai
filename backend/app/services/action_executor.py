@@ -1,13 +1,4 @@
-﻿# Action Executor
-#
-# Carries out the FINAL action (after policy approval) from the
-# RecoverAI pipeline. Only PAYMENT_LINK results in a real Razorpay API
-# call. Other actions (RETRY, CUSTOMER_NUDGE, ESCALATE, STOP) are logged
-# as simulated/internal actions, since Razorpay has no generic API for
-# them - this matches the real-vs-simulated distinction documented in
-# docs/razorpay_test_mode_verification.md.
-
-from backend.app.services.razorpay_service import create_payment_link
+﻿from backend.app.services.razorpay_service import create_payment_link
 
 
 def execute_action(
@@ -41,9 +32,6 @@ def execute_action(
             }
 
     if action_type == "RETRY":
-        # No generic Razorpay "retry" API exists - this is a simulated
-        # internal action representing "the system will attempt to
-        # resolve this via the next payment cycle."
         return {
             "executed": True,
             "real_or_simulated": "simulated",
@@ -67,7 +55,6 @@ def execute_action(
             "details": {},
         }
 
-    # STOP
     return {
         "executed": True,
         "real_or_simulated": "simulated",

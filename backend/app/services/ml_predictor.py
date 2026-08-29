@@ -1,9 +1,4 @@
-﻿# ML Prediction Service
-#
-# Loads the trained model (Phase 7) and provides a function to predict
-# recovery probability for new transaction data.
-
-import joblib
+﻿import joblib
 import pandas as pd
 
 _model = None
@@ -28,31 +23,21 @@ def _load_artifacts():
 
 
 def predict_recovery_probability(transaction_row: dict) -> float:
-    """
-    transaction_row must contain (as a flat dict):
-    amount, retry_count, total_transactions, successful_transactions,
-    failed_transactions, average_transaction_value, lifetime_value,
-    failure_reason, payment_method
-    """
     model, scaler, feature_columns = _load_artifacts()
 
-    row = dict(transaction_row)  # copy, don't mutate caller's dict
+    row = dict(transaction_row)
     row["historical_success_rate"] = (
         row["successful_transactions"] / max(row["total_transactions"], 1)
     )
 
-    # Build a single-row DataFrame matching the training format
     df = pd.DataFrame([row])
     df_encoded = pd.get_dummies(df, columns=["failure_reason", "payment_method"])
 
-    # Ensure every expected feature column exists (missing categories
-    # from a single row become 0), in the exact order the model expects.
     for col in feature_columns:
         if col not in df_encoded.columns:
             df_encoded[col] = 0
     df_encoded = df_encoded[feature_columns]
 
-    # Scale numeric columns using the SAME scaler fitted during training
     df_encoded[NUMERIC_FEATURES] = scaler.transform(df_encoded[NUMERIC_FEATURES])
 
     probability = model.predict_proba(df_encoded)[0][1]

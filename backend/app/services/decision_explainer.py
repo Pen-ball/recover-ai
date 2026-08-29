@@ -1,16 +1,4 @@
-﻿# Decision Explanation Service
-#
-# Uses an LLM (Gemini) to generate a short, human-readable explanation for
-# WHY a given action was selected. The LLM does NOT choose the action -
-# that is decided by decision_engine.select_candidate_action() using
-# deterministic rules. This function only explains the decision in plain
-# language, and produces a concise ranking of alternative actions.
-#
-# If the LLM is unavailable or fails for any reason, this falls back to a
-# simple template-based explanation so the system keeps working.
-
-import os
-import json
+﻿import os
 from dotenv import load_dotenv
 from google import genai
 
@@ -59,8 +47,6 @@ ONLY the explanation text, no preamble, no quotes."""
             "source": "llm",
         }
     except Exception as e:
-        # Fallback: deterministic, template-based explanation.
-        # The system must keep working even if the LLM is down.
         fallback_explanation = (
             f"Action '{action}' was selected based on a recovery probability "
             f"of {recovery_probability:.0%} and an expected recovery value of "

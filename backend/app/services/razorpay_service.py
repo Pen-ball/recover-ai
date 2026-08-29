@@ -1,10 +1,4 @@
-﻿# Razorpay Service
-#
-# Wraps Razorpay's official Python SDK to create real Test Mode Payment
-# Links. This is REAL Razorpay Test Mode integration - not simulated.
-# No live money is ever involved; Test Mode uses sandboxed test cards.
-
-import os
+﻿import os
 import razorpay
 from dotenv import load_dotenv
 
@@ -30,13 +24,6 @@ def create_payment_link(
     customer_contact: str = None,
     reference_id: str = None,
 ) -> dict:
-    """
-    Creates a real Razorpay Test Mode Payment Link.
-
-    amount_rupees is converted to paise (Razorpay's smallest currency unit
-    for INR - 1 rupee = 100 paise), since the Razorpay API expects amounts
-    in the smallest currency unit, not decimal rupees.
-    """
     client = get_client()
 
     amount_paise = int(round(amount_rupees * 100))
@@ -50,7 +37,7 @@ def create_payment_link(
             "email": customer_email,
         },
         "notify": {
-            "sms": False,  # keep False for dev/testing to avoid real SMS sends
+            "sms": False,
             "email": False,
         },
         "reminder_enable": False,

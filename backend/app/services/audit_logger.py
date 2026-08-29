@@ -1,9 +1,4 @@
-﻿# Audit Logger
-#
-# Small helper to consistently write entries to the audit_logs table
-# from anywhere in the pipeline.
-
-from sqlalchemy.orm import Session
+﻿from sqlalchemy.orm import Session
 from backend.app.models.audit import AuditLog
 
 
