@@ -134,3 +134,4 @@ if __name__ == "__main__":
     joblib.dump(best_model_name, "ml/models/selected_model_type.pkl")
 
     print(f"Saved best model as ml/models/{best_model_name}.pkl")
+
