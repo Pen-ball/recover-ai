@@ -1,6 +1,6 @@
-﻿import axios from 'axios'
+import axios from 'axios'
 
-const API_BASE_URL = 'https://recoverai-backend.onrender.com'
+const API_BASE_URL = 'https://recoverai-backend-cylo.onrender.com'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
