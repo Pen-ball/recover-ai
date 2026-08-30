@@ -52,8 +52,8 @@ function CaseDetail() {
           )}
           {customer && (
             <div className="mt-4 pt-4 border-t border-slate-700 space-y-2 text-sm">
-              <p><span className="text-slate-400">Customer:</span> {customer.name}</p>
-              <p><span className="text-slate-400">Email:</span> {customer.email}</p>
+              <p><span className="text-slate-400">Customer:</span> {customer.name === "void" ? "Test Customer" : customer.name}</p>
+<p><span className="text-slate-400">Email:</span> {customer.email}</p>
             </div>
           )}
         </div>

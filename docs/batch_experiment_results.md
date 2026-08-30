@@ -69,3 +69,39 @@ matching the original project specification. Random seed fixed at 123
 
 for reproducibility. Methodology identical to Run 1 (see above).
 
+\## Policy Engine Stress Test (informational, not the production configuration)
+
+
+
+To verify the policy engine meaningfully constrains automated actions
+
+(not just in isolated unit tests), the automation amount threshold was
+
+temporarily lowered from Rs 50,000 to Rs 2,000 and the 20,000-transaction
+
+batch was re-run.
+
+
+
+Result: 9,408 automated actions were blocked by policy, and 13,258 cases
+
+were escalated to human review instead of being handled automatically.
+
+Net recovered revenue fell sharply (to approximately Rs 13.5 lakh, a
+
+\-94.8% change versus Baseline) because the system correctly refused to
+
+act automatically on nearly all cases above the tightened threshold.
+
+
+
+This confirms the policy engine has real, load-bearing effect on system
+
+behavior, not just isolated unit-test coverage - tightening merchant
+
+policy meaningfully shifts the automation-vs-compliance trade-off, as
+
+intended. The production configuration uses Rs 50,000 as a reasonable
+
+default (see docs/testing.md for the individually verified policy rules).
+
