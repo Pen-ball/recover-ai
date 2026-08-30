@@ -57,9 +57,22 @@ python -m pytest backend/tests/ -v
 Full methodology docs in docs/ folder.
 
 ## Limitations
-- Synthetic data used for ML training, documented as such throughout.
-- Simulated actions reflect real Razorpay API constraints, not shortcuts.
-- Free-tier hosting may show a brief delay on first request after idle.
+
+- Synthetic data is used for ML training and batch experimentation,
+  clearly documented as such throughout (see docs/synthetic_data_assumptions.md).
+- Simulated actions (RETRY, CUSTOMER_NUDGE, ESCALATE, STOP) reflect the
+  real constraint that Razorpay has no generic API for these operations.
+- The reported batch experiment (27.2% net recovery improvement) is from
+  a single run with a fixed random seed for reproducibility. A production-
+  grade claim would require multiple seeds and a confidence interval,
+  which was out of scope for this build.
+- The dashboard and API currently have no authentication layer. This is
+  acceptable for a demo/evaluation build but would need to be addressed
+  (e.g. JWT-based auth, role-based access) before any real merchant use.
+- Free-tier hosting (Render) may show a brief delay on the first request
+  after a period of inactivity (cold start).
+- Policy thresholds are currently global constants, not yet configurable
+  per merchant - see Future Improvements.
 
 ## Future Improvements
 - Real SMS/email delivery for nudges
