@@ -1,4 +1,6 @@
-﻿# RecoverAI
+﻿![Tests](https://github.com/Pen-ball/recover-ai/actions/workflows/tests.yml/badge.svg)
+
+# RecoverAI
 
 Autonomous Revenue Recovery Agent for Razorpay
 Built for the Razorpay AI Buildathon — Track 3: AI Revenue Recovery
